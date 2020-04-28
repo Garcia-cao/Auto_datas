@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+{% load static %}
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <link rel="stylesheet" type="text/css" href={% static 'css/GridManager.css' %}>
+    <script type="text/javascript" src={% static 'js/jquery.min.js' %}></script>
+    <script type="text/javascript" src={% static 'js/GridManager.js' %}></script>
+    <title>项目接口配置</title>
+    <style>
+        html, body {
+            width: 100%;
+            /*height: 100%;*/
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        .plugin-action {
+            display: inline-block;
+            color: steelblue;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .plugin-action:hover {
+            text-decoration: underline;
+        }
+
+        .search-area {
+            padding: 10px 20px;
+            border: 1px solid #ccc;
+            background: #efefef;
+        }
+
+        .search-area .sa-ele {
+            display: inline-block;
+            margin-right: 20px;
+            font-size: 12px;
+        }
+
+        .search-area .sa-ele .se-title {
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .search-area .sa-ele .se-con {
+            display: inline-block;
+            width: 150px;
+            height: 24px;
+            border: 1px solid #ccc;
+            padding: 0px 4px;
+            line-height: 24px;
+        }
+
+        .search-area .sa-ele .search-action, .search-area .sa-ele .reset-action, .search-area .sa-ele #layer_btn {
+            display: inline-block;
+            width: 80px;
+            height: 26px;
+            border: 1px solid #ccc;
+            background: #e8e8e8;
+            padding: 0px 4px;
+            line-height: 26px;
+            text-align: center;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .search-area .sa-ele .search-action:hover, .search-area .sa-ele .reset-action:hover, .search-area .sa-ele #layer_btn:hover {
+            opacity: 0.7;
+        }
+
+        .add-layer {
+            width: 100%;
+            height: 100%;
+            position: fixed;
+            background: rgba(143, 148, 150, 0.8);
+            display: none;
+            top: 0;
+            left: 0;
+        }
+
+        .layer {
+            position: relative;
+            width: 500px;
+            height: 300px;
+            background: #ccc;
+            border: 3px solid #fff;
+            left: 50%;
+            margin-left: -250px;
+            top: 50%;
+            margin-top: -150px;
+        }
+
+        .close {
+            position: absolute;
+            right: 15px;
+            top: 5px;
+        }
+
+        td {
+            font-size: 14px;
+            height: 28px;
+        }
+    </style>
+</head>
+
+<body>
+<div class="search-area">
+    <div class="sa-ele">
+        <label class="se-title">接口名称:</label>
+        <input class="se-con" name="name"/>
+    </div>
+    <div class="sa-ele">
+        <label class="se-title">相关项目:</label>
+        <select id="project"></select>
+    </div>
+    <div class="sa-ele">
+        <label class="se-title">rap2接口id:</label>
+        <input class="se-con" type="number" name="api_rap_id"/>
+    </div>
+    <div class="sa-ele">
+        <button class="search-action">搜索</button>
+        <button class="reset-action">重置</button>
+        <button id="layer_btn">增加数据</button>
+    </div>
+</div>
+<br/>
+<table></table>
+
+<div class="add-layer">
+    <div class="layer">
+        <div style="height: 30px">
+            <label class="close">X</label>
+        </div>
+        <div style="width: 100%; position: absolute; top: 30px ;">
+            <table style="width: 400px;margin:auto;">
+                <tr>
+                    <td style="width: 100px;text-align: right">*接口名称：</td>
+                    <td><input maxlength="20" style="width: 250px" name="add_name"/></td>
+                </tr>
+                <tr>
+                    <td style="width: 100px;text-align: right">*rap2接口id：</td>
+                    <td><input maxlength="200" type="number" style="width: 250px" name="add_api_rap_id"/></td>
+                </tr>
+                <tr>
+                    <td style="width: 100px;text-align: right">相关项目：</td>
+                    <td>
+                        <select id="select_project" name="add_project"></select>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" align="center">
+                        <button onclick="clearAjax()">清空</button>
+                        <button class="add-action">添加</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" align="center">
+                        <label id="err_message" style="display: none;color: red">*标记字段必须填写</label>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<script type="text/javascript">
+    var pathName=window.document.location.pathname;
+    var curWwwPath=window.document.location.href;
+    var pos=curWwwPath.indexOf(pathName);
+    var domain = curWwwPath.substring(0, pos);
+
+    window.onload = function () {
+        $.ajax({
+            url: domain + "/get_project",
+            type: "GET",
+            dataType: 'json',
+            async: false,
+            success: function (msg) {
+                // $('select#select_database').children('option').remove();　　//删除下拉框下的选项
+                for (var i = 0; i < msg.project.length; i++) {
+                    $('select').append('<option value="' + msg.project[i].id + '">'
+                        + msg.project[i].name + '</option>')  // 依次增加选项
+                }
+            }
+        });
+    }
+
+    var table = document.querySelector('table');
+    var TGM = table.GM({
+        supportRemind: true
+        , gridManagerName: '接口配置信息'
+        , height: '400px'
+        , supportAjaxPage: true
+        , supportSorting: true
+        , isCombSorting: false
+        , disableCache: false
+        , ajax_url: domain + "/get_api/"
+        , ajax_type: 'GET'
+        // 配置 request header, 非xhr自带的头信息将会触发非简单请求, 需要在后端进行对应的配置
+        // 参考链接: http://www.lovejavascript.com/#!zone/blog/content.html?id=53
+//		,ajax_headers: {
+//			'header-test': 'this is test request header'
+//		}
+        // 配置xhr, 如: withCredentials -> 跨域情况使用cookie等证书. 需要在后端进行对应的配置
+        // 参考链接: http://www.lovejavascript.com/#!zone/blog/content.html?id=59
+//		,ajax_xhrFields: {
+//			withCredentials: true
+//		}
+        {#,query: {test: 22}#}
+        , dataKey: 'list'  // 注意: 这里是用来测试responseHandler 是否生效; 数据本身返回为data, 而在这里我把数据名模拟为list, 再通过responseHandler去更改
+        , pageSize: 30
+
+        // 通过该方法修改全部的请求参数
+        //,requestHandler: function(request){
+        //request.newParams = '这个参数是通过 requestHandler 函数新增的';
+        // 更改这个参数后, 将会强制createDate字段使用 降序排序.
+        // 'sort_' 通过 配置项 sortKey 进行配置
+        // 'DESC' 通过 配置项 sortDownText 进行配置
+//			request.sort_createDate = 'DESC';
+        //}
+        // 可以通过该方法修改返回的数据
+        , responseHandler: function (response) {
+            console.log(response);
+            response.list = response.api;
+        }
+        , columnData: [{
+            key: 'name',
+            remind: 'project_api(name)',
+            width: '100px',
+            align: 'left',
+            text: '接口名称'
+        }, {
+            key: 'api_rap_id',
+            remind: 'project_api(api_rap_id)',
+            width: '100px',
+            align: 'left',
+            text: 'rap2接口id'
+        }, {
+            key: 'project__name',
+            remind: 'project__name',
+            width: '100px',
+            align: 'left',
+            text: '相关项目'
+        }, {
+            key: 'create_date',
+            remind: 'project_api(create_date)',
+            width: '100px',
+            text: '创建时间',
+        }, {
+            key: 'update_date',
+            remind: 'project_api(update_date)',
+            width: '100px',
+            text: '最后修改时间',
+        }, {
+            key: 'action',
+            remind: 'the action',
+            width: '10%',
+            text: '操作',
+            template: function (action, rowObject) {
+                return '<span class="plugin-action del-action" onclick="delectRowData(this)" learnLink-id="' + rowObject.id + '">删除</span>';
+            }
+        }
+        ]
+        // 分页前事件
+        , pagingBefore: function (query) {
+            console.log('pagingBefore', query);
+        }
+        // 分页后事件
+        , pagingAfter: function (data) {
+            console.log('pagingAfter', data);
+        }
+        // 排序前事件
+        , sortingBefore: function (data) {
+            console.log('sortBefore', data);
+        }
+        // 排序后事件
+        , sortingAfter: function (data) {
+            console.log('sortAfter', data);
+        }
+        // 宽度调整前事件
+        , adjustBefore: function (event) {
+            console.log('adjustBefore', event);
+        }
+        // 宽度调整后事件
+        , adjustAfter: function (event) {
+            console.log('adjustAfter', event);
+        }
+        // 拖拽前事件
+        , dragBefore: function (event) {
+            console.log('dragBefore', event);
+        }
+        // 拖拽后事件
+        , dragAfter: function (event) {
+            console.log('dragAfter', event);
+        }
+    }, function (query) {
+        // 渲染完成后的回调函数
+        console.log('渲染完成后的回调函数:', query);
+    });
+
+    // 删除功能
+    function delectRowData(node) {
+        // 获取到当前的tr node
+        var tr = node.parentNode.parentNode;
+        // 获取到当前渲染tr 所使用的数据
+        var rowData = document.querySelector('table').GM('getRowData', tr);
+        // 执行删除操作
+        if (window.confirm('确认要删除【' + rowData.name + '】项目接口配置信息吗?')) {
+            var _query = {
+                id: rowData.id,
+                cPage: 1
+            };
+
+            var _url = domain + "/delete_api";
+            var _type = 'POST';
+
+            table.GM('setUrlData', _query, _url, _type, function () {
+                console.log('setUrlData执行成功;数据成功删除！');
+            });
+        }
+    }
+
+    // 绑定搜索事件
+    document.querySelector('.search-action').addEventListener('click', function () {
+        var _query = {
+            name: document.querySelector('[name="name"]').value,
+            project: $('#project').find('option:selected').val(),
+            api_rap_id: document.querySelector('[name="api_rap_id"]').value,
+            cPage: 1
+        };
+
+        var _url = domain + "/search_api";
+        var _type = 'POST';
+
+        table.GM('setUrlData', _query, _url, _type, function () {
+            console.log('setUrlData执行成功;数据成功搜索！');
+        });
+    });
+
+    // 绑定重置事件
+    document.querySelector('.reset-action').addEventListener('click', function () {
+        document.querySelector('[name="name"]').value = '';
+        document.querySelector('[name="api_rap_id"]').value = null;
+    });
+
+    // 绑定显示添加弹窗事件
+    document.querySelector('#layer_btn').addEventListener('click', function () {
+        document.querySelector('.add-layer').style.display = "block";
+    });
+
+    // 绑定关闭添加弹窗事件
+    document.querySelector('.close').addEventListener('click', function () {
+        document.querySelector('.add-layer').style.display = "none";
+        clearAjax();
+    });
+
+    //清空
+    function clearAjax() {
+        document.querySelector('[name="add_name"]').value = '';
+        document.querySelector('[name="add_api_rap_id"]').value = '';
+        document.getElementById('err_message').style.display = 'none';
+    }
+
+    // 绑定添加事件
+    document.querySelector('.add-action').addEventListener('click', function () {
+        var project = $('#select_project').find('option:selected').val();
+        var name = document.querySelector('[name="add_name"]').value;
+        var api_rap_id = document.querySelector('[name="add_api_rap_id"]').value;
+        if (name == '' || api_rap_id == '') {
+            document.getElementById('err_message').style.display = 'block';
+        } else {
+            var _query = {
+                name: name,
+                api_rap_id: api_rap_id,
+                project: project,
+                cPage: 1
+            };
+
+            var _url = domain + "/add_api";
+            var _type = 'POST';
+
+            table.GM('setUrlData', _query, _url, _type, function () {
+                console.log('setUrlData执行成功;数据添加成功！');
+            });
+            document.querySelector('.add-layer').style.display = "none"
+            clearAjax();
+        }
+    });
+</script>
+
+</body>
+</html>

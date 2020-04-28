@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+{% load static %}
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <link rel="stylesheet" type="text/css" href={% static 'css/GridManager.css' %}>
+    <script type="text/javascript" src={% static 'js/jquery.min.js' %}></script>
+    <script type="text/javascript" src={% static 'js/GridManager.js' %}></script>
+    <title>流程信息</title>
+    <style>
+        html, body {
+            width: 100%;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        .plugin-action {
+            display: inline-block;
+            color: steelblue;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .plugin-action:hover {
+            text-decoration: underline;
+        }
+
+        .search-area {
+            padding: 10px 20px;
+            border: 1px solid #ccc;
+            background: #efefef;
+        }
+
+        .search-area .sa-ele {
+            display: inline-block;
+            margin-right: 20px;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .search-area .sa-ele .se-title {
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .search-area .sa-ele .se-con {
+            display: inline-block;
+            width: 150px;
+            height: 24px;
+            border: 1px solid #ccc;
+            padding: 0px 4px;
+            line-height: 24px;
+        }
+
+        .search-area .sa-ele .search-action, .search-area .sa-ele .reset-action, .search-area .sa-ele #layer_btn {
+            display: inline-block;
+            width: 100px;
+            height: 26px;
+            border: 1px solid #ccc;
+            background: #e8e8e8;
+            padding: 0px 4px;
+            line-height: 26px;
+            text-align: center;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .search-area .sa-ele .search-action:hover, .search-area .sa-ele .reset-action:hover, .search-area .sa-ele #layer_btn:hover {
+            opacity: 0.7;
+        }
+
+        .add-layer {
+            width: 100%;
+            height: 100%;
+            position: fixed;
+            background: rgba(143, 148, 150, 0.8);
+            display: none;
+            top: 0;
+            left: 0;
+        }
+
+        .layer {
+            position: relative;
+            width: 500px;
+            height: 180px;
+            background: #ccc;
+            border: 3px solid #fff;
+            left: 50%;
+            margin-left: -250px;
+            top: 50%;
+            margin-top: -150px;
+        }
+
+        .close {
+            position: absolute;
+            right: 15px;
+            top: 5px;
+        }
+
+        td {
+            font-size: 14px;
+            height: 28px;
+        }
+    </style>
+</head>
+
+<body>
+<div class="search-area">
+    <div class="sa-ele">
+        <label class="se-title">流程名称:</label>
+        <input class="se-con" name="name" style="background-color: gainsboro" disabled/>
+        <label class="se-title">相关项目:</label>
+        <select id="select_project"></select>
+        <br/><br/>
+        <label class="se-title">流转类型:</label>
+        <select id="select_type">
+            <option value="1" selected>接口</option>
+            <option value="2">SQL</option>
+        </select>
+        <label class="se-title">流转过程:</label>
+        <select id="select_process"></select>
+        <input class="se-con" name="process" style="width: 200px;display: none"/>
+        <label class="se-title">传递字段:</label>
+        <input class="se-con" name="transmit_dict" maxlength="50" style="width: 100px"/>
+        <input class="se-con" name="transmit" maxlength="50" style="width: 100px"/>
+        <label class="se-title">接收字段:</label>
+        <input class="se-con" name="accept" maxlength="50" style="width: 100px"/>
+    </div>
+    <div class="sa-ele">
+        <button id="add_process_btn">添加流程</button>
+    </div>
+</div>
+<br/>
+<table></table>
+
+
+<script type="text/javascript">
+    var transmit_flow_id = getQueryStringValue('flow_id');
+    var transmit_project_id = getQueryStringValue('project_id');
+    var pathName=window.document.location.pathname;
+    var curWwwPath=window.document.location.href;
+    var pos=curWwwPath.indexOf(pathName);
+    var domain = curWwwPath.substring(0, pos);
+    var step;
+
+    window.onload = function () {
+        document.querySelector('[name="name"]').value = getQueryStringValue('flow_name');
+        $.ajax({
+            url: domain + "/get_project",
+            type: "POST",
+            data: {"project_id": transmit_project_id},
+            dataType: 'json',
+            async: false,
+            success: function (msg) {
+                // $('select#select_database').children('option').remove();　　//删除下拉框下的选项
+                for (var i = 0; i < msg.project.length; i++) {
+                    $('select#select_project').append('<option value="' + msg.project[i].id + '">'
+                        + msg.project[i].name + '</option>')  // 依次增加选项
+                }
+            }
+        });
+
+        $.ajax({
+            url: domain + "/get_api",
+            type: "POST",
+            data: {"project_id": transmit_project_id},
+            dataType: 'json',
+            async: false,
+            success: function (msg) {
+                for (var i = 0; i < msg.api.length; i++) {
+                    $('select#select_process').append('<option value="' + msg.api[i].id + '">'
+                        + msg.api[i].name + msg.api[i].api_rap_id + '</option>')  // 依次增加选项
+                }
+            }
+        });
+    }
+
+    // 获取传递参数值
+    function getQueryStringValue(key) {
+        return decodeURIComponent(window.location.href.replace(new RegExp("^(?:.*[&\\?]" + encodeURIComponent(key).replace(/[\.\+\*]/g, "\\$&") + "(?:\\=([^&]*))?)?.*$", "i"), "$1"));
+    }
+
+    //根据#select_process的选择内容显示响应的流转过程显示方式
+    $("#select_type").change(function () {
+        var process = $(this).val();
+        if (process == 1) {
+            $('#select_process').show()
+            $('input[name="process"]').hide()
+        } else {
+            $('#select_process').hide()
+            $('input[name="process"]').show()
+        }
+    });
+
+    //添加流程
+    document.querySelector('#add_process_btn').addEventListener('click', function () {
+        var type = $('#select_type').find('option:selected').val();
+        var api = $('#select_process').find('option:selected').val();
+        var process = document.querySelector('[name="process"]').value;
+        var transmit_dict = document.querySelector('[name="transmit_dict"]').value;
+        var transmit = document.querySelector('[name="transmit"]').value;
+        var accept = document.querySelector('[name="accept"]').value;
+        if ((type == 1 && api == '') || (type == 2 && process == '') || (transmit_dict != '' && transmit == '')) {
+            alert('请输入必填内容！')
+        } else {
+            var _query = {
+                type: type,
+                step: step + 1,
+                api: api,
+                process: process,
+                transmit_dict: transmit_dict,
+                transmit: transmit,
+                accept: accept,
+                flow_id: transmit_flow_id,
+                cPage: 1
+            };
+
+            var _url = domain + "/add_sub_flow";
+            var _type = 'POST';
+
+            table.GM('setUrlData', _query, _url, _type, function () {
+                console.log('setUrlData执行成功;数据添加成功！');
+            });
+            {#clearAjax();#}
+        }
+    });
+
+    var table = document.querySelector('table');
+    var TGM = table.GM({
+        supportRemind: true
+        , gridManagerName: '流程流转信息'
+        , height: '400px'
+        , supportAjaxPage: true
+        , supportSorting: true
+        , isCombSorting: false
+        , disableCache: false
+        , ajax_url: domain + "/get_sub_flow"
+        , ajax_type: 'GET'
+        , query: {flow_id: transmit_flow_id}
+        , dataKey: 'list'
+        , pageSize: 30
+
+        // 可以通过该方法修改返回的数据
+        , responseHandler: function (response) {
+            console.log(response);
+            response.list = response.sub_flow;
+            if ((response.sub_flow).length != 0) {
+                step = (response.sub_flow)[(response.sub_flow).length - 1]['step'];
+            } else {
+                step = 0;
+            }
+        }
+        , columnData: [{
+            key: 'type',
+            remind: 'project_sub_flow(type)',
+            width: '100px',
+            align: 'left',
+            text: '流转类型',
+            template: function (action, rowObject) {
+                if (rowObject.type == 1) {
+                    return '<select>' +
+                        '<option value=' + 2 + '>SQL</option>' +
+                        '<option value=' + 1 + ' selected>接口</option>' +
+                        '</select>'
+                } else {
+                    return '<select>' +
+                        '<option value=' + 1 + '>接口</option>' +
+                        '<option value=' + 2 + ' selected>SQL</option>' +
+                        '</select>'
+                }
+            }
+        }, {
+            key: 'process',
+            remind: 'project_sub_flow(process)',
+            width: '100px',
+            align: 'left',
+            text: '流传过程',
+            template: function (action, rowObject) {
+                if (rowObject.type == 1) {
+                    var btn = document.createElement("select");
+                    $.ajax({
+                        url: domain + "/get_api",
+                        type: "POST",
+                        data: {"project_id": transmit_project_id},
+                        dataType: 'json',
+                        async: false,
+                        success: function (msg) {
+                            for (var i = 0; i < msg.api.length; i++) {
+                                var newOption = document.createElement("option");
+                                newOption.appendChild(document.createTextNode(msg.api[i].name + msg.api[i].api_rap_id));
+                                newOption.setAttribute("value", msg.id);
+                                if (msg.api[i].id == rowObject.process) {
+                                    newOption.setAttribute("selected", "selected");
+                                }
+                                btn.appendChild(newOption);
+                            }
+                        }
+                    });
+                    return btn.outerHTML
+                } else {
+                    return "<textarea style='width:200px'>" + rowObject.process + "</textarea>"
+                }
+            }
+        }, {
+            key: 'transmit_dict',
+            remind: 'project_sub_flow(transmit_dict)',
+            width: '100px',
+            text: '传递字段对应的key',
+            template: function (action, rowObject) {
+                if (rowObject.transmit != null) {
+                    return '<input maxlength="50" value="' + rowObject.transmit_dict + '" />'
+                } else {
+                    return ''
+                }
+            }
+        }, {
+            key: 'transmit',
+            remind: 'project_sub_flow(transmit)',
+            width: '100px',
+            text: '传递字段',
+            template: function (action, rowObject) {
+                if (rowObject.transmit != null) {
+                    return '<input maxlength="50" value="' + rowObject.transmit + '" />'
+                } else {
+                    return '<input maxlength="50" value="" />'
+                }
+            }
+        }, {
+            key: 'accept',
+            remind: 'project_sub_flow(accept)',
+            width: '100px',
+            text: '接收字段',
+            template: function (action, rowObject) {
+                if (rowObject.accept != null) {
+                    return '<input maxlength="50" value="' + rowObject.accept + '" />'
+                } else {
+                    return '<input maxlength="50" value="" />'
+                }
+            }
+        }]
+        // 分页前事件
+        , pagingBefore: function (query) {
+            console.log('pagingBefore', query);
+        }
+        // 分页后事件
+        , pagingAfter: function (data) {
+            console.log('pagingAfter', data);
+        }
+        // 宽度调整前事件
+        , adjustBefore: function (event) {
+            console.log('adjustBefore', event);
+        }
+        // 宽度调整后事件
+        , adjustAfter: function (event) {
+            console.log('adjustAfter', event);
+        }
+    }, function (query) {
+        // 渲染完成后的回调函数
+        console.log('渲染完成后的回调函数:', query);
+    });
+</script>
+
+</body>
+</html>
