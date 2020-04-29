@@ -87,11 +87,11 @@ WSGI_APPLICATION = 'Auto_Datas.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'auto_create_data',
-        'USER': 'root',
-        'PASSWORD': 'shadow@123..',
-        'HOST': '47.98.153.173',
-        'PORT': '3306',
+        'NAME': 数据库名称,
+        'USER': 用户,
+        'PASSWORD': 密码,
+        'HOST': 地址,
+        'PORT': 端口,
         # 'CURSORCLASS': 'MySQLdb.cursors.DictCursor'
     }
 }
